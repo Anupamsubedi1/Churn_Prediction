@@ -133,6 +133,84 @@ function DonutChart({ probability }) {
   );
 }
 
+// ========== SHAP Feature Impact Chart ==========
+function ShapChart({ shapValues, baseValue }) {
+  if (!shapValues || shapValues.length === 0) return null;
+
+  const maxAbs = Math.max(...shapValues.map((s) => Math.abs(s.value)), 0.001);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 mb-1">
+        <div className="w-7 h-7 rounded-md bg-purple-50 flex items-center justify-center">
+          <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+        </div>
+        <div>
+          <p className="text-sm font-bold text-gray-900">SHAP — Feature Impact</p>
+          <p className="text-[10px] text-gray-400">How each feature pushes the prediction</p>
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="flex gap-4 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+        <span className="flex items-center gap-1">
+          <span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" />
+          Pushes toward churn
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" />
+          Pushes toward retention
+        </span>
+      </div>
+
+      {/* Bars */}
+      <div className="space-y-1.5">
+        {shapValues.map((item, idx) => {
+          const pct = (Math.abs(item.value) / maxAbs) * 100;
+          const isChurn = item.value > 0;
+          return (
+            <div key={idx} className="group">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-gray-600 font-medium w-[120px] truncate text-right shrink-0">
+                  {item.feature}
+                </span>
+                <div className="flex-1 flex items-center h-6 relative">
+                  {/* center line */}
+                  <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-300 z-10" />
+                  {/* bar */}
+                  {isChurn ? (
+                    <div className="absolute left-1/2 h-5 rounded-r-md bg-red-500 transition-all duration-700 ease-out"
+                      style={{ width: `${pct / 2}%` }}
+                    />
+                  ) : (
+                    <div className="absolute right-1/2 h-5 rounded-l-md bg-emerald-500 transition-all duration-700 ease-out"
+                      style={{ width: `${pct / 2}%` }}
+                    />
+                  )}
+                </div>
+                <span className={`text-[10px] font-bold w-[50px] text-right shrink-0 ${
+                  isChurn ? "text-red-600" : "text-emerald-600"
+                }`}>
+                  {item.value > 0 ? "+" : ""}{item.value.toFixed(4)}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Base value note */}
+      {baseValue !== undefined && (
+        <div className="text-[10px] text-gray-400 text-center pt-1 border-t border-gray-100 mt-2">
+          Base value (avg. model output): <span className="font-semibold text-gray-500">{baseValue.toFixed(4)}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ========== Spinner ==========
 function Spinner() {
   return (
@@ -489,6 +567,13 @@ export default function Home() {
 
                   {/* Donut Chart */}
                   <DonutChart probability={result.probability} />
+
+                  {/* SHAP Feature Impact */}
+                  {result.shap_values && (
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <ShapChart shapValues={result.shap_values} baseValue={result.shap_base_value} />
+                    </div>
+                  )}
 
                   {/* Risk Assessment */}
                   <div className={`rounded-lg p-4 text-center border ${

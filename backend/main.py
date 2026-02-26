@@ -40,5 +40,7 @@ def predict(customer: Customer):
         "prediction": result["prediction"],
         "churn": "Yes" if result["prediction"] == 1 else "No",
         "probability": result["probability"],
-        "confidence": round(result["probability"] * 100, 2)
+        "confidence": round(result["probability"] * 100, 2),
+        "shap_values": result["shap_values"],
+        "shap_base_value": result["shap_base_value"],
     }
