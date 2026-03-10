@@ -201,6 +201,10 @@ function ShapChart({ shapValues, baseValue }) {
         })}
       </div>
 
+      <p className="text-[11px] text-gray-500 text-center pt-1">
+        Positive values increase churn risk, while negative values support customer retention.
+      </p>
+
       {/* Base value note */}
       {baseValue !== undefined && (
         <div className="text-[10px] text-gray-400 text-center pt-1 border-t border-gray-100 mt-2">
@@ -261,6 +265,12 @@ export default function Home() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const getProbabilityDescription = (confidence) => {
+    if (confidence > 70) return "High churn likelihood: this customer may leave soon without intervention.";
+    if (confidence > 40) return "Moderate churn likelihood: proactive follow-up is advised.";
+    return "Low churn likelihood: this customer is likely to stay.";
+  };
 
   const handleChange = (name, value) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -563,6 +573,9 @@ export default function Home() {
                         style={{ width: `${result.confidence}%` }}
                       />
                     </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      {getProbabilityDescription(result.confidence)}
+                    </p>
                   </div>
 
                   {/* Donut Chart */}

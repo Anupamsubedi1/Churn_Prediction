@@ -1,5 +1,6 @@
 import joblib
 import numpy as np
+import pandas as pd
 import shap
 
 
@@ -15,6 +16,19 @@ FEATURE_NAMES = [
     "PaperlessBilling_Yes",
     "Partner_Yes",
 ]
+
+SCALER_FEATURE_NAMES = {
+    "tenure": "tenure",
+    "MonthlyCharges": "MonthlyCharges",
+    "TotalCharges": "TotalCharges",
+    "InternetService_Fiber_optic": "InternetService_Fiber optic",
+    "PaymentMethod_Electronic_check": "PaymentMethod_Electronic check",
+    "Contract_Two_year": "Contract_Two year",
+    "OnlineSecurity_Yes": "OnlineSecurity_Yes",
+    "TechSupport_Yes": "TechSupport_Yes",
+    "PaperlessBilling_Yes": "PaperlessBilling_Yes",
+    "Partner_Yes": "Partner_Yes",
+}
 
 FEATURE_LABELS = {
     "tenure": "Tenure",
@@ -38,9 +52,12 @@ class ChurnModel:
         self.explainer = shap.TreeExplainer(self.model)
 
     def predict(self, features: dict):
-        input_array = np.array([[features[f] for f in FEATURE_NAMES]])
-
-        scaled_input = self.scaler.transform(input_array)
+        scaler_input = {
+            SCALER_FEATURE_NAMES[f]: features[f]
+            for f in FEATURE_NAMES
+        }
+        input_df = pd.DataFrame([scaler_input], columns=[SCALER_FEATURE_NAMES[f] for f in FEATURE_NAMES])
+        scaled_input = self.scaler.transform(input_df)
 
         prediction = self.model.predict(scaled_input)[0]
         probability = self.model.predict_proba(scaled_input)[0][1]
