@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 const API_URL = "http://127.0.0.1:8000/predict";
 
@@ -249,6 +250,7 @@ function Toggle({ checked, onChange }) {
 
 // ========== Main Page ==========
 export default function Home() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     tenure: "",
     MonthlyCharges: "",
@@ -265,6 +267,33 @@ export default function Home() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [authLoading, setAuthLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/me", {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          router.replace("/login");
+          return;
+        }
+
+        const data = await response.json();
+        setCurrentUser(data.user || null);
+      } catch {
+        router.replace("/login");
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, [router]);
 
   const getProbabilityDescription = (confidence) => {
     if (confidence > 70) return "High churn likelihood: this customer may leave soon without intervention.";
@@ -336,6 +365,24 @@ export default function Home() {
     setError("");
   };
 
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+    } finally {
+      router.replace("/login");
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Spinner />
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-gray-50">
       {/* ===== Navbar ===== */}
@@ -349,9 +396,21 @@ export default function Home() {
             </div>
             <span className="text-lg font-bold text-gray-900 tracking-tight">ChurnDetecter</span>
           </div>
-          <div className="flex items-center gap-2 text-xs bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1.5 text-emerald-700 font-medium">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            Model Online
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 text-xs bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1.5 text-emerald-700 font-medium">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              Model Online
+            </div>
+            <div className="hidden sm:flex items-center text-xs text-gray-500 bg-gray-100 border border-gray-200 rounded-full px-3 py-1.5">
+              {currentUser?.email}
+            </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="text-xs font-semibold px-3 py-1.5 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100"
+            >
+              Logout
+            </button>
           </div>
         </div>
       </nav>
