@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation";
 
 const API_URL = "http://127.0.0.1:8000/predict";
 
+const MODEL_ORDER = [
+  { key: "random_forest", label: "Random Forest", short: "RF" },
+  { key: "logistic_regression", label: "Logistic Regression", short: "LR" },
+  { key: "decision_tree", label: "Decision Tree", short: "DT" },
+  { key: "svm", label: "SVM", short: "SVM" },
+];
+
 const FIELDS = [
   {
     name: "tenure",
@@ -248,6 +255,52 @@ function Toggle({ checked, onChange }) {
   );
 }
 
+function ModelPredictionCard({ modelName, modelResult, isActive, onSelect }) {
+  const isChurn = modelResult?.prediction === 1;
+  const confidence = modelResult?.confidence ?? 0;
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`w-full text-left rounded-lg border p-3 transition-all duration-200 ${
+        isActive
+          ? "border-blue-400 bg-blue-50 shadow-sm"
+          : "border-gray-200 bg-white hover:border-gray-300"
+      }`}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">{modelName}</p>
+        <span
+          className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${
+            isChurn
+              ? "bg-red-50 border-red-200 text-red-600"
+              : "bg-emerald-50 border-emerald-200 text-emerald-600"
+          }`}
+        >
+          {isChurn ? "Churn" : "Stay"}
+        </span>
+      </div>
+
+      <div className="flex items-end justify-between">
+        <p className={`text-lg font-black ${isChurn ? "text-red-600" : "text-emerald-600"}`}>
+          {confidence.toFixed(2)}%
+        </p>
+        <p className="text-[10px] text-gray-400 font-medium">risk</p>
+      </div>
+
+      <div className="mt-2 w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-700 ${
+            confidence > 50 ? "bg-red-500" : "bg-emerald-500"
+          }`}
+          style={{ width: `${Math.min(Math.max(confidence, 0), 100)}%` }}
+        />
+      </div>
+    </button>
+  );
+}
+
 // ========== Main Page ==========
 export default function Home() {
   const router = useRouter();
@@ -265,6 +318,7 @@ export default function Home() {
   });
 
   const [result, setResult] = useState(null);
+  const [selectedModelKey, setSelectedModelKey] = useState("random_forest");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [authLoading, setAuthLoading] = useState(true);
@@ -341,6 +395,7 @@ export default function Home() {
 
       const data = await res.json();
       setResult(data);
+      setSelectedModelKey("random_forest");
     } catch (err) {
       setError(err.message || "Failed to connect to the prediction server. Is the backend running?");
     } finally {
@@ -362,6 +417,7 @@ export default function Home() {
       Partner_Yes: 0,
     });
     setResult(null);
+    setSelectedModelKey("random_forest");
     setError("");
   };
 
@@ -374,6 +430,12 @@ export default function Home() {
       router.replace("/login");
     }
   };
+
+  const modelsResult = result?.models || {
+    random_forest: result,
+  };
+  const selectedModelResult = modelsResult?.[selectedModelKey] || modelsResult?.random_forest || result;
+  const selectedModelLabel = MODEL_ORDER.find((m) => m.key === selectedModelKey)?.label || "Random Forest";
 
   if (authLoading) {
     return (
@@ -422,7 +484,7 @@ export default function Home() {
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
-            Random Forest ML Model
+            Multi-Model ML Prediction
           </div>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-gray-900 tracking-tight leading-tight">
             Customer Churn Prediction
@@ -594,16 +656,41 @@ export default function Home() {
               {/* ===== Results ===== */}
               {result && !loading && (
                 <div className="space-y-5">
+                  {/* Side-by-side model predictions */}
+                  {modelsResult && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">Model Comparison</p>
+                        <p className="text-[10px] text-gray-400">Click a model to view details</p>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {MODEL_ORDER.filter((m) => modelsResult[m.key]).map((modelMeta) => (
+                          <ModelPredictionCard
+                            key={modelMeta.key}
+                            modelName={modelMeta.label}
+                            modelResult={modelsResult[modelMeta.key]}
+                            isActive={selectedModelKey === modelMeta.key}
+                            onSelect={() => setSelectedModelKey(modelMeta.key)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="text-center text-[11px] text-gray-500 -mt-1">
+                    Detailed view: <span className="font-semibold text-gray-700">{selectedModelLabel}</span>
+                  </div>
+
                   {/* Status Badge */}
                   <div className="text-center">
                     <div
                       className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold ${
-                        result.prediction === 1
+                        selectedModelResult.prediction === 1
                           ? "bg-red-50 border border-red-200 text-red-700"
                           : "bg-emerald-50 border border-emerald-200 text-emerald-700"
                       }`}
                     >
-                      {result.prediction === 1 ? (
+                      {selectedModelResult.prediction === 1 ? (
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
                         </svg>
@@ -612,7 +699,7 @@ export default function Home() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                       )}
-                      {result.prediction === 1 ? "Likely to Churn" : "Likely to Stay"}
+                      {selectedModelResult.prediction === 1 ? "Likely to Churn" : "Likely to Stay"}
                     </div>
                   </div>
 
@@ -620,55 +707,55 @@ export default function Home() {
                   <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                     <div className="flex justify-between items-center text-sm mb-2.5">
                       <span className="font-medium text-gray-600">Churn Probability</span>
-                      <span className={`text-lg font-black ${result.confidence > 50 ? "text-red-600" : "text-emerald-600"}`}>
-                        {result.confidence}%
+                      <span className={`text-lg font-black ${selectedModelResult.confidence > 50 ? "text-red-600" : "text-emerald-600"}`}>
+                        {selectedModelResult.confidence}%
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-1000 ease-out ${
-                          result.confidence > 50 ? "bg-red-500" : "bg-emerald-500"
+                          selectedModelResult.confidence > 50 ? "bg-red-500" : "bg-emerald-500"
                         }`}
-                        style={{ width: `${result.confidence}%` }}
+                        style={{ width: `${selectedModelResult.confidence}%` }}
                       />
                     </div>
                     <p className="text-xs text-gray-500 mt-2">
-                      {getProbabilityDescription(result.confidence)}
+                      {getProbabilityDescription(selectedModelResult.confidence)}
                     </p>
                   </div>
 
                   {/* Donut Chart */}
-                  <DonutChart probability={result.probability} />
+                  <DonutChart probability={selectedModelResult.probability} />
 
                   {/* SHAP Feature Impact */}
-                  {result.shap_values && (
+                  {selectedModelResult?.shap_values && (
                     <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <ShapChart shapValues={result.shap_values} baseValue={result.shap_base_value} />
+                      <ShapChart shapValues={selectedModelResult.shap_values} baseValue={selectedModelResult.shap_base_value} />
                     </div>
                   )}
 
                   {/* Risk Assessment */}
                   <div className={`rounded-lg p-4 text-center border ${
-                    result.confidence > 70
+                    selectedModelResult.confidence > 70
                       ? "bg-red-50 border-red-200"
-                      : result.confidence > 40
+                      : selectedModelResult.confidence > 40
                       ? "bg-amber-50 border-amber-200"
                       : "bg-emerald-50 border-emerald-200"
                   }`}>
                     <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-1">Risk Assessment</p>
                     <p className={`text-lg font-black ${
-                      result.confidence > 70
+                      selectedModelResult.confidence > 70
                         ? "text-red-600"
-                        : result.confidence > 40
+                        : selectedModelResult.confidence > 40
                         ? "text-amber-600"
                         : "text-emerald-600"
                     }`}>
-                      {result.confidence > 70 ? "HIGH RISK" : result.confidence > 40 ? "MEDIUM RISK" : "LOW RISK"}
+                      {selectedModelResult.confidence > 70 ? "HIGH RISK" : selectedModelResult.confidence > 40 ? "MEDIUM RISK" : "LOW RISK"}
                     </p>
                     <p className="text-[11px] text-gray-500 mt-1">
-                      {result.confidence > 70
+                      {selectedModelResult.confidence > 70
                         ? "Immediate intervention recommended"
-                        : result.confidence > 40
+                        : selectedModelResult.confidence > 40
                         ? "Monitor and engage proactively"
                         : "Customer appears satisfied"}
                     </p>
@@ -678,14 +765,14 @@ export default function Home() {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 text-center">
                       <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Status</p>
-                      <p className={`text-sm font-bold mt-0.5 ${result.prediction === 1 ? "text-red-600" : "text-emerald-600"}`}>
-                        {result.churn === "Yes" ? "Churning" : "Retained"}
+                      <p className={`text-sm font-bold mt-0.5 ${selectedModelResult.prediction === 1 ? "text-red-600" : "text-emerald-600"}`}>
+                        {selectedModelResult.churn === "Yes" ? "Churning" : "Retained"}
                       </p>
                     </div>
                     <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 text-center">
                       <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Confidence</p>
                       <p className="text-sm font-bold mt-0.5 text-blue-600">
-                        {result.confidence > 50 ? result.confidence : (100 - result.confidence).toFixed(2)}%
+                        {selectedModelResult.confidence > 50 ? selectedModelResult.confidence : (100 - selectedModelResult.confidence).toFixed(2)}%
                       </p>
                     </div>
                   </div>
@@ -708,7 +795,7 @@ export default function Home() {
               </div>
               <span className="font-semibold text-gray-500">ChurnDetecter</span>
             </div>
-            <span>FastAPI &middot; Next.js &middot; Random Forest</span>
+            <span>FastAPI &middot; Next.js &middot; Random Forest + Logistic + Decision Tree + SVM</span>
           </div>
         </div>
       </footer>

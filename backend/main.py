@@ -2,9 +2,15 @@ from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
 from churn_model import ChurnModel
+from logistic_model import LogisticRegressionModel
+from decision_tree_model import DecisionTreeModel
+from svm_model import SvmModel
 
 app = FastAPI(title="Churn Prediction API", version="1.0.0")
-model = ChurnModel()
+rf_model = ChurnModel()
+lr_model = LogisticRegressionModel()
+dt_model = DecisionTreeModel()
+svm_model = SvmModel()
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,12 +41,25 @@ def root():
 
 @app.post("/predict")
 def predict(customer: Customer):
-    result = model.predict(customer.dict())
+    features = customer.dict()
+    rf_result = rf_model.predict(features)
+    lr_result = lr_model.predict(features)
+    dt_result = dt_model.predict(features)
+    svm_result = svm_model.predict(features)
+
     return {
-        "prediction": result["prediction"],
-        "churn": "Yes" if result["prediction"] == 1 else "No",
-        "probability": result["probability"],
-        "confidence": round(result["probability"] * 100, 2),
-        "shap_values": result["shap_values"],
-        "shap_base_value": result["shap_base_value"],
+        # Keep original single-model keys for backward compatibility (Random Forest)
+        "prediction": rf_result["prediction"],
+        "churn": rf_result["churn"],
+        "probability": rf_result["probability"],
+        "confidence": rf_result["confidence"],
+        "shap_values": rf_result["shap_values"],
+        "shap_base_value": rf_result["shap_base_value"],
+        # New multi-model output for side-by-side rendering
+        "models": {
+            "random_forest": rf_result,
+            "logistic_regression": lr_result,
+            "decision_tree": dt_result,
+            "svm": svm_result,
+        },
     }

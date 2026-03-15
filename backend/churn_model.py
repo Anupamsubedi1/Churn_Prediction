@@ -3,60 +3,25 @@ import numpy as np
 import pandas as pd
 import shap
 
-
-FEATURE_NAMES = [
-    "tenure",
-    "MonthlyCharges",
-    "TotalCharges",
-    "InternetService_Fiber_optic",
-    "PaymentMethod_Electronic_check",
-    "Contract_Two_year",
-    "OnlineSecurity_Yes",
-    "TechSupport_Yes",
-    "PaperlessBilling_Yes",
-    "Partner_Yes",
-]
-
-SCALER_FEATURE_NAMES = {
-    "tenure": "tenure",
-    "MonthlyCharges": "MonthlyCharges",
-    "TotalCharges": "TotalCharges",
-    "InternetService_Fiber_optic": "InternetService_Fiber optic",
-    "PaymentMethod_Electronic_check": "PaymentMethod_Electronic check",
-    "Contract_Two_year": "Contract_Two year",
-    "OnlineSecurity_Yes": "OnlineSecurity_Yes",
-    "TechSupport_Yes": "TechSupport_Yes",
-    "PaperlessBilling_Yes": "PaperlessBilling_Yes",
-    "Partner_Yes": "Partner_Yes",
-}
-
-FEATURE_LABELS = {
-    "tenure": "Tenure",
-    "MonthlyCharges": "Monthly Charges",
-    "TotalCharges": "Total Charges",
-    "InternetService_Fiber_optic": "Fiber Optic Internet",
-    "PaymentMethod_Electronic_check": "Electronic Check",
-    "Contract_Two_year": "Two-Year Contract",
-    "OnlineSecurity_Yes": "Online Security",
-    "TechSupport_Yes": "Tech Support",
-    "PaperlessBilling_Yes": "Paperless Billing",
-    "Partner_Yes": "Has Partner",
-}
+from model_config import DATASET_FEATURE_NAMES, FEATURE_LABELS, FEATURE_NAMES
 
 
 class ChurnModel:
 
     def __init__(self):
         self.model = joblib.load("rf_model.pkl")
-        self.scaler = joblib.load("scaler.pkl")
+        try:
+            self.scaler = joblib.load("rf_scaler.pkl")
+        except FileNotFoundError:
+            self.scaler = joblib.load("scaler.pkl")
         self.explainer = shap.TreeExplainer(self.model)
 
     def predict(self, features: dict):
         scaler_input = {
-            SCALER_FEATURE_NAMES[f]: features[f]
+            DATASET_FEATURE_NAMES[f]: features[f]
             for f in FEATURE_NAMES
         }
-        input_df = pd.DataFrame([scaler_input], columns=[SCALER_FEATURE_NAMES[f] for f in FEATURE_NAMES])
+        input_df = pd.DataFrame([scaler_input], columns=[DATASET_FEATURE_NAMES[f] for f in FEATURE_NAMES])
         scaled_input = self.scaler.transform(input_df)
 
         prediction = self.model.predict(scaled_input)[0]
@@ -91,7 +56,9 @@ class ChurnModel:
 
         return {
             "prediction": int(prediction),
+            "churn": "Yes" if int(prediction) == 1 else "No",
             "probability": round(float(probability), 4),
+            "confidence": round(float(probability) * 100, 2),
             "shap_values": shap_breakdown,
             "shap_base_value": round(base_value, 4),
         }
