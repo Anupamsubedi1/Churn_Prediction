@@ -355,6 +355,19 @@ export default function Home() {
     return "Low churn likelihood: this customer is likely to stay.";
   };
 
+  const getRecommendation = (confidence) => {
+    if (confidence <= 10) return { riskLevel: "Very Low Risk",  recommendation: "Customer is loyal. Maintain normal engagement. Send occasional newsletters or loyalty rewards.",   bg: "bg-emerald-50",  border: "border-emerald-200", badge: "bg-emerald-100 text-emerald-700",  icon: "text-emerald-500" };
+    if (confidence <= 20) return { riskLevel: "Low Risk",        recommendation: "Keep customer engaged with personalized emails or product updates. Monitor behavior.",             bg: "bg-emerald-50",  border: "border-emerald-200", badge: "bg-emerald-100 text-emerald-700",  icon: "text-emerald-500" };
+    if (confidence <= 30) return { riskLevel: "Slight Risk",     recommendation: "Offer small incentives like discounts or loyalty points. Improve customer experience.",          bg: "bg-teal-50",     border: "border-teal-200",    badge: "bg-teal-100 text-teal-700",       icon: "text-teal-500" };
+    if (confidence <= 40) return { riskLevel: "Moderate Risk",   recommendation: "Send targeted promotions, ask for feedback, and check satisfaction level.",                    bg: "bg-yellow-50",   border: "border-yellow-200",  badge: "bg-yellow-100 text-yellow-700",   icon: "text-yellow-500" };
+    if (confidence <= 50) return { riskLevel: "Medium Risk",     recommendation: "Customer support should reach out. Provide limited-time offers.",                             bg: "bg-amber-50",    border: "border-amber-200",   badge: "bg-amber-100 text-amber-700",     icon: "text-amber-500" };
+    if (confidence <= 60) return { riskLevel: "High Risk",        recommendation: "Offer retention discounts or upgrade benefits. Investigate customer issues.",                   bg: "bg-orange-50",   border: "border-orange-200",  badge: "bg-orange-100 text-orange-700",   icon: "text-orange-500" };
+    if (confidence <= 70) return { riskLevel: "Very High Risk",  recommendation: "Direct customer support intervention. Provide personalized offers.",                           bg: "bg-orange-50",   border: "border-orange-200",  badge: "bg-orange-100 text-orange-700",   icon: "text-orange-500" };
+    if (confidence <= 80) return { riskLevel: "Critical Risk",   recommendation: "Strong retention campaign, exclusive discounts, or premium support.",                          bg: "bg-red-50",      border: "border-red-200",     badge: "bg-red-100 text-red-700",         icon: "text-red-500" };
+    if (confidence <= 90) return { riskLevel: "Severe Risk",     recommendation: "Immediate action required. Call customer or send urgent retention offers.",                    bg: "bg-red-50",      border: "border-red-200",     badge: "bg-red-100 text-red-700",         icon: "text-red-500" };
+    return               { riskLevel: "Extreme Risk",    recommendation: "Customer almost lost. Offer major incentives or win-back strategy.",                               bg: "bg-red-50",      border: "border-red-200",     badge: "bg-red-100 text-red-700",         icon: "text-red-500" };
+  };
+
   const handleChange = (name, value) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -734,32 +747,28 @@ export default function Home() {
                     </div>
                   )}
 
-                  {/* Risk Assessment */}
-                  <div className={`rounded-lg p-4 text-center border ${
-                    selectedModelResult.confidence > 70
-                      ? "bg-red-50 border-red-200"
-                      : selectedModelResult.confidence > 40
-                      ? "bg-amber-50 border-amber-200"
-                      : "bg-emerald-50 border-emerald-200"
-                  }`}>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-1">Risk Assessment</p>
-                    <p className={`text-lg font-black ${
-                      selectedModelResult.confidence > 70
-                        ? "text-red-600"
-                        : selectedModelResult.confidence > 40
-                        ? "text-amber-600"
-                        : "text-emerald-600"
-                    }`}>
-                      {selectedModelResult.confidence > 70 ? "HIGH RISK" : selectedModelResult.confidence > 40 ? "MEDIUM RISK" : "LOW RISK"}
-                    </p>
-                    <p className="text-[11px] text-gray-500 mt-1">
-                      {selectedModelResult.confidence > 70
-                        ? "Immediate intervention recommended"
-                        : selectedModelResult.confidence > 40
-                        ? "Monitor and engage proactively"
-                        : "Customer appears satisfied"}
-                    </p>
-                  </div>
+                  {/* Recommendation */}
+                  {(() => {
+                    const rec = getRecommendation(selectedModelResult.confidence);
+                    return (
+                      <div className={`rounded-lg p-4 border ${rec.bg} ${rec.border}`}>
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-6 h-6 rounded-md bg-white border border-gray-200 flex items-center justify-center shrink-0">
+                            <svg className={`w-3.5 h-3.5 ${rec.icon}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                          </div>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Recommendation</p>
+                          <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full ${rec.badge}`}>
+                            {rec.riskLevel}
+                          </span>
+                        </div>
+                        <p className="text-[12px] text-gray-700 leading-relaxed">
+                          {rec.recommendation}
+                        </p>
+                      </div>
+                    );
+                  })()}
 
                   {/* Quick Stats */}
                   <div className="grid grid-cols-2 gap-3">
