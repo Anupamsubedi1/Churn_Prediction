@@ -258,7 +258,24 @@ export default function Home() {
     return map[color] || map.emerald;
   };
 
-  const handleChange = (name, value) => setFormData((prev) => ({ ...prev, [name]: value }));
+  const handleChange = (name, value) => {
+    setFormData((prev) => {
+      const next = { ...prev, [name]: value };
+
+      if (name === "tenure" || name === "MonthlyCharges") {
+        const tenure = Number(name === "tenure" ? value : prev.tenure);
+        const monthly = Number(name === "MonthlyCharges" ? value : prev.MonthlyCharges);
+
+        if (!Number.isNaN(tenure) && !Number.isNaN(monthly) && tenure >= 0 && monthly >= 0) {
+          next.TotalCharges = (tenure * monthly).toFixed(2);
+        } else {
+          next.TotalCharges = "";
+        }
+      }
+
+      return next;
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
