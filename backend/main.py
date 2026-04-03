@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
-from churn_model import RandomForestModel
+from random_forest_model import RandomForestModel
 from logistic_model import LogisticRegressionModel
 from decision_tree_model import DecisionTreeModel
 from svm_model import SvmModel
