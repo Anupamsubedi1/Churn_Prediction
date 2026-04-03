@@ -6,7 +6,7 @@ import shap
 from model_config import DATASET_FEATURE_NAMES, FEATURE_LABELS, FEATURE_NAMES
 
 
-class ChurnModel:
+class RandomForestModel:
 
     def __init__(self):
         self.model = joblib.load("rf_model.pkl")

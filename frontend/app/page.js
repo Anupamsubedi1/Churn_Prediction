@@ -739,7 +739,11 @@ export default function Home() {
 
                 {/* Recommendation */}
                 {(() => {
-                  const rec = getRecommendation(selectedModelResult.confidence);
+                  const rec = {
+                    riskLevel: selectedModelResult.risk_level || getRecommendation(selectedModelResult.confidence).riskLevel,
+                    recommendation: selectedModelResult.action_recommendation || getRecommendation(selectedModelResult.confidence).recommendation,
+                    color: selectedModelResult.recommendation_color || getRecommendation(selectedModelResult.confidence).color,
+                  };
                   return (
                     <div className="flex-1 flex flex-col">
                       <div className="flex items-center justify-between mb-2">
