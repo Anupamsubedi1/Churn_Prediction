@@ -169,19 +169,36 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [authLoading, setAuthLoading] = useState(true);
+  const [authRequired, setAuthRequired] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
+    let authCheckInterval;
+
     const checkAuth = async () => {
       try {
         const response = await fetch("/api/auth/me", { method: "GET", cache: "no-store" });
-        if (!response.ok) { router.replace("/login"); return; }
+        if (!response.ok) {
+          setAuthRequired(true);
+          setCurrentUser(null);
+          return;
+        }
         const data = await response.json();
         setCurrentUser(data.user || null);
-      } catch { router.replace("/login"); }
-      finally { setAuthLoading(false); }
+        setAuthRequired(false);
+      } catch (err) {
+        setAuthRequired(true);
+        setCurrentUser(null);
+      } finally {
+        setAuthLoading(false);
+      }
     };
+
     checkAuth();
+
+    authCheckInterval = setInterval(checkAuth, 3000); // auto-check every 3s
+
+    return () => clearInterval(authCheckInterval);
   }, [router]);
 
   const getRecommendation = (confidence) => {
@@ -290,7 +307,15 @@ export default function Home() {
     const payload = { ...formData, tenure: parseFloat(formData.tenure), MonthlyCharges: parseFloat(formData.MonthlyCharges), TotalCharges: parseFloat(formData.TotalCharges) };
     try {
       const res = await fetch(API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-      if (!res.ok) { const errData = await res.json().catch(() => null); throw new Error(errData?.detail || `Server error: ${res.status}`); }
+      if (res.status === 401) {
+        setAuthRequired(true);
+        setError("Session expired. Please log in again.");
+        return;
+      }
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.detail || `Server error: ${res.status}`);
+      }
       const data = await res.json();
       setResult(data); setSelectedModelKey("random_forest");
     } catch (err) {
@@ -315,6 +340,26 @@ export default function Home() {
     return (
       <main className="min-h-screen bg-slate-50 flex items-center justify-center">
         <Spinner />
+      </main>
+    );
+  }
+
+  if (authRequired) {
+    return (
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white border border-gray-200 rounded-xl p-6 shadow-sm text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Login Required</h1>
+          <p className="text-sm text-gray-600 mb-6">
+            Your authentication cookie is missing or invalid. For security, we have locked the prediction dashboard.
+          </p>
+          <button
+            onClick={() => router.replace("/login")}
+            className="w-full bg-blue-600 text-white rounded-lg py-2.5 font-semibold hover:bg-blue-700 transition"
+          >
+            Go to Login
+          </button>
+          <p className="text-xs text-gray-400 mt-4">If you deleted the cookie manually, please sign in again.</p>
+        </div>
       </main>
     );
   }
